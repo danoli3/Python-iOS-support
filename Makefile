@@ -5,7 +5,7 @@ OSX_SDK_ROOT=$(shell xcrun --sdk macosx --show-sdk-path)
 
 # Version of packages that will be compiled by this meta-package
 FFI_VERSION=3.0.13
-PYTHON_VERSION=2.7.1
+PYTHON_VERSION=2.7.6
 
 # IPHONE build commands and flags
 IPHONE_ARMV7_SDK_ROOT=$(shell xcrun --sdk iphoneos --show-sdk-path)

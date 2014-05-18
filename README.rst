@@ -10,7 +10,7 @@ and libPython.a, and packaging them both in iOS Framework format.
 The binaries support the `$(ARCHS_STANDARD_32_BIT)` set - that is, armv7 and
 armv7s. This should enable the code to run on iPhone 3GS, 4, 4s, 5 and 5s.
 
-This repository builds a packaged version of **Python 2.7.1**. Other Python
+This repository builds a packaged version of **Python 2.7.6**. Other Python
 versions are available by cloning other branches of the main repository.
 
 Quickstart
