@@ -11,25 +11,28 @@ The ``site-packages`` has the `Rubicon Objective-C`_ library pre-installed.
 This library enables you to have direct access to the iOS system libraries
 from within the Python environment.
 
-The binaries support the ``$(ARCHS_STANDARD_32_BIT)`` set - that is, armv7 and
-armv7s. This should enable the code to run on:
+The binaries support the ``$(ARCHS_STANDARD)`` set - that is, armv7 and arm64.
+The binaries require iOS 8.0 or higher.
+This should enable the code to run on:
 
 * iPhone
-    - iPhone 3GS,
     - iPhone 4
     - iPhone 4s
     - iPhone 5
     - iPhone 5s
+    - iPhone 6
+    - iPhone 6 Plus
 * iPad
     - iPad 2
     - iPad (3rd gen)
     - iPad (4th gen)
     - iPad Air
+    - iPad Air 2
 * iPad Mini
-    - iPad Mini (1st gen)
-    - iPad Mini (2nd gen)
+    - iPad Mini 1
+    - iPad Mini 2
+    - iPad Mini 3
 * iPod Touch
-    - iPod Touch (4th gen)
     - iPod Touch (5th gen)
 
 This repository branch builds a packaged version of **Python 2.7.1**.
