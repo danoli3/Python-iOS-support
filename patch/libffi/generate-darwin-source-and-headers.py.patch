@@ -1,0 +1,38 @@
+--- libffi-3.2.1-old/generate-darwin-source-and-headers.py	2014-11-08 04:47:24.000000000 -0800
++++ libffi-3.2.1-new/generate-darwin-source-and-headers.py	2015-02-26 12:52:14.000000000 -0800
+@@ -14,7 +14,7 @@
+     sdk = 'iphonesimulator'
+     arch = 'i386'
+     triple = 'i386-apple-darwin11'
+-    version_min = '-miphoneos-version-min=5.1.1'
++    version_min = '-miphoneos-version-min=8.0'
+ 
+     prefix = "#ifdef __i386__\n\n"
+     suffix = "\n\n#endif"
+@@ -27,7 +27,7 @@
+     sdk = 'iphonesimulator'
+     arch = 'x86_64'
+     triple = 'x86_64-apple-darwin13'
+-    version_min = '-miphoneos-version-min=7.0'
++    version_min = '-miphoneos-version-min=8.0'
+ 
+     prefix = "#ifdef __x86_64__\n\n"
+     suffix = "\n\n#endif"
+@@ -40,7 +40,7 @@
+     sdk = 'iphoneos'
+     arch = 'armv7'
+     triple = 'arm-apple-darwin11'
+-    version_min = '-miphoneos-version-min=5.1.1'
++    version_min = '-miphoneos-version-min=8.0'
+ 
+     prefix = "#ifdef __arm__\n\n"
+     suffix = "\n\n#endif"
+@@ -53,7 +53,7 @@
+     sdk = 'iphoneos'
+     arch = 'arm64'
+     triple = 'aarch64-apple-darwin13'
+-    version_min = '-miphoneos-version-min=7.0'
++    version_min = '-miphoneos-version-min=8.0'
+ 
+     prefix = "#ifdef __arm64__\n\n"
+     suffix = "\n\n#endif"
