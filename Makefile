@@ -12,22 +12,29 @@ RUBICON_VERSION=0.1.2
 IPHONE_ARMV7_SDK_ROOT=$(shell xcrun --sdk iphoneos --show-sdk-path)
 IPHONE_ARMV7_CC=$(shell xcrun -find -sdk iphoneos clang)
 IPHONE_ARMV7_LD=$(shell xcrun -find -sdk iphoneos ld)
-IPHONE_ARMV7_CFLAGS=-arch armv7 -pipe -no-cpp-precomp -isysroot $(IPHONE_ARMV7_SDK_ROOT) -miphoneos-version-min=8.0
-IPHONE_ARMV7_LDFLAGS=-arch armv7 -isysroot $(IPHONE_ARMV7_SDK_ROOT) -miphoneos-version-min=8.0
+IPHONE_ARMV7_CFLAGS=-arch armv7 -pipe -fPIC -no-cpp-precomp -isysroot $(IPHONE_ARMV7_SDK_ROOT) -miphoneos-version-min=6.0
+IPHONE_ARMV7_LDFLAGS=-arch armv7 -isysroot $(IPHONE_ARMV7_SDK_ROOT) -miphoneos-version-min=6.0
 
 # IPHONE build commands and flags
 IPHONE_ARM64_SDK_ROOT=$(shell xcrun --sdk iphoneos --show-sdk-path)
 IPHONE_ARM64_CC=$(shell xcrun -find -sdk iphoneos clang)
 IPHONE_ARM64_LD=$(shell xcrun -find -sdk iphoneos ld)
-IPHONE_ARM64_CFLAGS=-arch arm64 -pipe -no-cpp-precomp -isysroot $(IPHONE_ARM64_SDK_ROOT) -miphoneos-version-min=8.0
-IPHONE_ARM64_LDFLAGS=-arch arm64 -isysroot $(IPHONE_ARM64_SDK_ROOT) -miphoneos-version-min=8.0
+IPHONE_ARM64_CFLAGS=-arch arm64 -pipe -fPIC -no-cpp-precomp -isysroot $(IPHONE_ARM64_SDK_ROOT) -miphoneos-version-min=7.0
+IPHONE_ARM64_LDFLAGS=-arch arm64 -isysroot $(IPHONE_ARM64_SDK_ROOT) -miphoneos-version-min=7.0
 
 # IPHONE_SIMULATOR build commands and flags
 IPHONE_SIMULATOR_SDK_ROOT=$(shell xcrun --sdk iphonesimulator --show-sdk-path)
 IPHONE_SIMULATOR_CC=$(shell xcrun -find -sdk iphonesimulator clang)
 IPHONE_SIMULATOR_LD=$(shell xcrun -find -sdk iphonesimulator ld)
-IPHONE_SIMULATOR_CFLAGS=-arch i386 -pipe -no-cpp-precomp -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -miphoneos-version-min=8.0
-IPHONE_SIMULATOR_LDFLAGS=-arch i386 -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -miphoneos-version-min=8.0
+IPHONE_SIMULATOR_CFLAGS=-arch i386 -pipe -fPIC -no-cpp-precomp -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -mios-simulator-version-min=6.0
+IPHONE_SIMULATOR_LDFLAGS=-arch i386 -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -mios-simulator-version-min=6.0
+
+# IPHONE_SIMULATOR build commands and flags
+IPHONE_SIMULATOR64__SDK_ROOT=$(shell xcrun --sdk iphonesimulator --show-sdk-path)
+IPHONE_SIMULATOR64_CC=$(shell xcrun -find -sdk iphonesimulator clang)
+IPHONE_SIMULATOR64_LD=$(shell xcrun -find -sdk iphonesimulator ld)
+IPHONE_SIMULATOR64_CFLAGS=-arch x86_64 -pipe -fPIC -no-cpp-precomp -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -mios-simulator-version-min=7.0
+IPHONE_SIMULATOR64_LDFLAGS=-arch x86_64 -isysroot $(IPHONE_SIMULATOR_SDK_ROOT) -mios-simulator-version-min==7.0
 
 
 all: working-dirs build/ffi.framework build/Python.framework
@@ -175,6 +182,45 @@ build/python/ios-simulator/Python: src/Python-$(PYTHON_VERSION)/build
 	cd build/python/ios-simulator/Headers && mv ../include/python$(basename $(PYTHON_VERSION))/* .
 	cd build/python/ios-simulator/Headers && mv pyconfig.h ../include/python$(basename $(PYTHON_VERSION))
 
+build/python/ios-simulator64/Python: src/Python-$(PYTHON_VERSION)/build
+	# Apply extra patches for iOS simulator build
+	cp patch/Python/ModulesSetup src/Python-$(PYTHON_VERSION)/Modules/Setup.local
+	cat patch/Python/ModulesSetup.mobile >> src/Python-$(PYTHON_VERSION)/Modules/Setup.local
+	cp patch/Python/_scproxy.py src/Python-$(PYTHON_VERSION)/Lib/_scproxy.py
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 < ../../patch/Python/xcompile.patch
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 < ../../patch/Python/setuppath.patch
+	# Configure and build Simulator library
+	cd src/Python-$(PYTHON_VERSION) && ./configure CC="$(IPHONE_SIMULATOR_CC)" LD="$(IPHONE_SIMULATOR64_LD)" CFLAGS="$(IPHONE_SIMULATOR64_CFLAGS) -I../../build/ffi.framework/Headers" LDFLAGS="$(IPHONE_SIMULATOR64_LDFLAGS) -L../../build/ffi.framework/ -lsqlite3 -undefined dynamic_lookup" --without-pymalloc --disable-toolbox-glue --prefix=/python --without-doc-strings
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 < ../../patch/Python/ctypes_duplicate.patch
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 < ../../patch/Python/pyconfig-arm64.patch
+	mkdir -p build/python/ios-simulator64
+	cd src/Python-$(PYTHON_VERSION) && make altbininstall libinstall inclinstall libainstall HOSTPYTHON=./hostpython CROSS_COMPILE_TARGET=yes prefix="../../build/python/ios-simulator64"
+	# Relocate and rename the libpython binary
+	cd build/python/ios-simulator64/lib && mv libpython$(basename $(PYTHON_VERSION)).a ../Python
+	# Clean out all the build data
+	cd src/Python-$(PYTHON_VERSION) && make distclean
+	# Reverse the source patches.
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 -R < ../../patch/Python/xcompile.patch
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 -R < ../../patch/Python/setuppath.patch
+	cd src/Python-$(PYTHON_VERSION) && patch -p1 -R < ../../patch/Python/ctypes_duplicate.patch
+	# Clean up build directory
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && rm config/libpython$(basename $(PYTHON_VERSION)).a config/python.o config/config.c.in config/makesetup
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && rm -rf *test* lib* wsgiref bsddb curses idlelib hotshot
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && find . -iname '*.pyc' | xargs rm
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && find . -iname '*.py' | xargs rm
+	cd build/python/ios-simulator64/lib && rm -rf pkgconfig
+	# Pack libraries into .zip file
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && mv config ..
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && mv site-packages ..
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && zip -r ../python27.zip *
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && rm -rf *
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && mv ../config .
+	cd build/python/ios-simulator64/lib/python$(basename $(PYTHON_VERSION)) && mv ../site-packages .
+	# Move all headers except for pyconfig.h into a Headers directory
+	mkdir -p build/python/ios-simulator64/Headers
+	cd build/python/ios-simulator64/Headers && mv ../include/python$(basename $(PYTHON_VERSION))/* .
+	cd build/python/ios-simulator64/Headers && mv pyconfig.h ../include/python$(basename $(PYTHON_VERSION))
+
 
 build/python/ios-armv7/Python: src/Python-$(PYTHON_VERSION)/build
 	# Apply extra patches for iPhone build
@@ -254,25 +300,27 @@ build/python/ios-arm64/Python: src/Python-$(PYTHON_VERSION)/build
 	cd build/python/ios-arm64/Headers && mv ../include/python$(basename $(PYTHON_VERSION))/* .
 	cd build/python/ios-arm64/Headers && mv pyconfig.h ../include/python$(basename $(PYTHON_VERSION))
 
-build/Python.framework: build/python/ios-simulator/Python build/python/ios-armv7/Python build/python/ios-arm64/Python src/rubicon-objc-$(RUBICON_VERSION)
+build/Python.framework: build/python/ios-simulator/Python build/python/ios-simulator64/Python build/python/ios-armv7/Python build/python/ios-arm64/Python src/rubicon-objc-$(RUBICON_VERSION)
 	# Create the framework directory from the compiled resrouces
 	mkdir -p build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/
 	cd build/Python.framework/Versions && ln -fs $(basename $(PYTHON_VERSION)) Current
 	# Copy the headers from the simulator build
-	cp -r build/python/ios-simulator/Headers build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Headers
+	cp -r build/python/ios-simulator64/Headers build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Headers
 	cd build/Python.framework && ln -fs Versions/Current/Headers
 	# Copy the standard library from the simulator build
 	mkdir -p build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources
 	cp -r build/python/ios-simulator/lib build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources
+	cp -r build/python/ios-simulator64/lib build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources
 	cd build/Python.framework && ln -fs Versions/Current/Resources
 	# Copy the pyconfig headers from the builds, and install the fat header.
 	mkdir -p build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))
 	cp build/python/ios-simulator/include/python$(basename $(PYTHON_VERSION))/pyconfig.h build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))/pyconfig-simulator.h
+	cp build/python/ios-simulator64/include/python$(basename $(PYTHON_VERSION))/pyconfig.h build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))/pyconfig-simulator64.h
 	cp build/python/ios-armv7/include/python$(basename $(PYTHON_VERSION))/pyconfig.h build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))/pyconfig-armv7.h
 	cp build/python/ios-arm64/include/python$(basename $(PYTHON_VERSION))/pyconfig.h build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))/pyconfig-arm64.h
 	cp patch/Python/pyconfig.h build/Python.framework/Versions/$(basename $(PYTHON_VERSION))/Resources/include/python$(basename $(PYTHON_VERSION))/
 	# Build a fat library with all targets included.
-	xcrun lipo -create -output build/Python.framework/Versions/Current/Python build/python/ios-simulator/Python build/python/ios-armv7/Python build/python/ios-arm64/Python
+	xcrun lipo -create -output build/Python.framework/Versions/Current/Python build/python/ios-simulator/Python build/python/ios-simulator64/Python build/python/ios-armv7/Python build/python/ios-arm64/Python
 	cd build/Python.framework && ln -fs Versions/Current/Python
 	# Install Rubicon into site packages.
 	cd src && cp -r rubicon-objc-$(RUBICON_VERSION)/rubicon ../build/Python.framework/Resources/lib/python$(basename $(PYTHON_VERSION))/site-packages/
@@ -301,3 +349,9 @@ env:
 	# IPHONE_SIMULATOR_LD $(IPHONE_SIMULATOR_LD)
 	# IPHONE_SIMULATOR_CFLAGS $(IPHONE_SIMULATOR_CFLAGS)
 	# IPHONE_SIMULATOR_LDFLAGS $(IPHONE_SIMULATOR_LDFLAGS)
+
+	# IPHONE_SIMULATOR64_SDK_ROOT $(IPHONE_SIMULATOR_SDK_ROOT)
+	# IPHONE_SIMULATOR64_CC $(IPHONE_SIMULATOR_CC)
+	# IPHONE_SIMULATOR64_LD $(IPHONE_SIMULATOR_LD)
+	# IPHONE_SIMULATOR64_CFLAGS $(IPHONE_SIMULATOR_CFLAGS)
+	# IPHONE_SIMULATOR64_LDFLAGS $(IPHONE_SIMULATOR_LDFLAGS)
